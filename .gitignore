@@ -26,3 +26,4 @@ replay_pid*
 #非模版的添加
 build/
 .DS_Store
+.idea
