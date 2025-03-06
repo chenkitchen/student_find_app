@@ -56,24 +56,33 @@ public class MongoDBHttpServer {
                     responseMap.put("insertedId", doc.get("_id").toString()); // 返回插入的文档 ID doc会被 MongoDB 进行修改吗？
 
                     String jsonResponse = new Document(responseMap).toJson();
+                    throw new IOException("error");
+
+                    // 设置响应头
+//                    exchange.getResponseHeaders().set("Content-Type", "application/json");
+//                    exchange.sendResponseHeaders(200, jsonResponse.length());
+
+                    // 返回响应
+//                    try (OutputStream os = exchange.getResponseBody()) {
+
+//                        os.write(response.getBytes()); //可以在 curl 中显示该 response
+//                        os.write(jsonResponse.getBytes(StandardCharsets.UTF_8)); //既可以在 zsh 环境中显示，也可以在浏览器中显示
+//                    }
+                } catch (Exception e) {
+                    // 构造错误响应
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("status", "fail");
+                    errorResponse.put("message", e.getMessage());
+
+                    String jsonErrorResponse = new Document(errorResponse).toJson();
 
                     // 设置响应头
                     exchange.getResponseHeaders().set("Content-Type", "application/json");
-                    exchange.sendResponseHeaders(200, jsonResponse.length());
+                    exchange.sendResponseHeaders(503, jsonErrorResponse.length());
 
-                    // 返回响应
-//                    String response = "Document inserted successfully!";
-//                    exchange.sendResponseHeaders(200, response.length());
+                    // 返回错误响应
                     try (OutputStream os = exchange.getResponseBody()) {
-//                        os.write(response.getBytes()); //可以在 curl 中显示该 response
-                        os.write(jsonResponse.getBytes(StandardCharsets.UTF_8)); //既可以在 zsh 环境中显示，也可以在浏览器中显示
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    String response = "Error: " + e.getMessage();
-                    exchange.sendResponseHeaders(500, response.length());
-                    try (OutputStream os = exchange.getResponseBody()) {
-                        os.write(response.getBytes());
+                        os.write(jsonErrorResponse.getBytes(StandardCharsets.UTF_8));
                     }
                 }
             } else {
