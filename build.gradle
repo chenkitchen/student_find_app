@@ -24,6 +24,12 @@ dependencies {
 
     // SLF4J 简单实现
     implementation 'org.slf4j:slf4j-simple:2.0.7'
+    // Jackson核心库
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.0'
+
+    //spring web
+//    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework:spring-web:5.3.20'
 }
 
 group = 'org.example'

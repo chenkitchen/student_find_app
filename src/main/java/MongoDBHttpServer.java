@@ -19,6 +19,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MongoDBHttpServer {
+    public static String successRep(Document doc) {
+        Map<String, Object> responseMap = new HashMap<>();
+        responseMap.put("status", "success");
+        responseMap.put("message", "successfully!");
+        responseMap.put("id", doc.get("_id").toString());
+        String jsonResponse = new Document(responseMap).toJson();
+        return jsonResponse;
+    }
+
     public static void main(String[] args) throws IOException {
         // 创建 HTTP 服务器，监听 8080 端口
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
@@ -56,18 +65,18 @@ public class MongoDBHttpServer {
                     responseMap.put("insertedId", doc.get("_id").toString()); // 返回插入的文档 ID doc会被 MongoDB 进行修改吗？
 
                     String jsonResponse = new Document(responseMap).toJson();
-                    throw new IOException("error");
+//                    throw new IOException("error");
 
                     // 设置响应头
-//                    exchange.getResponseHeaders().set("Content-Type", "application/json");
-//                    exchange.sendResponseHeaders(200, jsonResponse.length());
+                    exchange.getResponseHeaders().set("Content-Type", "application/json");
+                    exchange.sendResponseHeaders(200, jsonResponse.length());
 
                     // 返回响应
-//                    try (OutputStream os = exchange.getResponseBody()) {
+                    try (OutputStream os = exchange.getResponseBody()) {
 
 //                        os.write(response.getBytes()); //可以在 curl 中显示该 response
-//                        os.write(jsonResponse.getBytes(StandardCharsets.UTF_8)); //既可以在 zsh 环境中显示，也可以在浏览器中显示
-//                    }
+                        os.write(jsonResponse.getBytes(StandardCharsets.UTF_8)); //既可以在 zsh 环境中显示，也可以在浏览器中显示
+                    }
                 } catch (Exception e) {
                     // 构造错误响应
                     Map<String, Object> errorResponse = new HashMap<>();
@@ -87,6 +96,43 @@ public class MongoDBHttpServer {
                 }
             } else {
                 exchange.sendResponseHeaders(405, -1); // 405 Method Not Allowed
+            }
+        }));
+
+        //insert articles集合
+        server.createContext("/art_insert",(exchange -> {
+            if ("POST".equals(exchange.getRequestMethod())) {
+                InputStream requestBody = exchange.getRequestBody();
+                String jsonString = new Scanner(requestBody, String.valueOf(StandardCharsets.UTF_8)).useDelimiter("\\A").next(); //useDelimiter("\\A") 已这个格式进行扫描
+                requestBody.close();
+                Document doc = Document.parse(jsonString);
+                try (MongoClient mongoClient = MongoClients.create("mongodb://localhost:27017")) {
+                    MongoDatabase database = mongoClient.getDatabase("my_first_json_data");
+                    MongoCollection<Document> collection = database.getCollection("articles_test");
+                    doc.append("createDate",System.currentTimeMillis()); //添加时间戳
+                    collection.insertOne(doc);
+                    String jr = successRep(doc);
+                    exchange.getResponseHeaders().set("Content-Type", "application/json");
+                    exchange.sendResponseHeaders(503, jr.length());
+
+                    // 返回错误响应
+                    try (OutputStream os = exchange.getResponseBody()) {
+                        os.write(jr.getBytes(StandardCharsets.UTF_8));
+                    }
+                }catch (Exception e) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("status", "fail");
+                    errorResponse.put("message", e.getMessage());
+                    String jsonErrorResponse = new Document(errorResponse).toJson();
+                    exchange.getResponseHeaders().set("Content-Type", "application/json");
+                    exchange.sendResponseHeaders(500, jsonErrorResponse.length());
+                    try (OutputStream os = exchange.getResponseBody()) {
+                        os.write(jsonErrorResponse.getBytes(StandardCharsets.UTF_8));
+                    }
+                }
+
+            }else {
+                exchange.sendResponseHeaders(404, -1);
             }
         }));
 
